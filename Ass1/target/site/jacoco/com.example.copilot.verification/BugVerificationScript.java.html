@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BugVerificationScript.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">lab3-springboot</a> &gt; <a href="index.source.html" class="el_package">com.example.copilot.verification</a> &gt; <span class="el_source">BugVerificationScript.java</span></div><h1>BugVerificationScript.java</h1><pre class="source lang-java linenums">package com.example.copilot.verification;
+
+import com.example.copilot.service.impl.OrderServiceImpl;
+import com.example.copilot.service.impl.ProductServiceImpl;
+import com.example.copilot.core.entity.Order;
+import com.example.copilot.core.entity.OrderItem;
+import com.example.copilot.core.entity.Product;
+import com.example.copilot.core.dto.CreateOrderRequestDTO;
+
+import java.lang.reflect.Method;
+
+/**
+ * Manual verification script to demonstrate introduced bugs
+ * This shows the bugs without dependency on Spring context
+ */
+<span class="nc" id="L16">public class BugVerificationScript {</span>
+    
+    public static void main(String[] args) {
+<span class="nc" id="L19">        System.out.println(&quot;=== BUG VERIFICATION SCRIPT ===\n&quot;);</span>
+        
+<span class="nc" id="L21">        verifyBugA();</span>
+<span class="nc" id="L22">        verifyBugB();</span>
+<span class="nc" id="L23">        verifyBugC();</span>
+        
+<span class="nc" id="L25">        System.out.println(&quot;\n=== VERIFICATION COMPLETE ===&quot;);</span>
+<span class="nc" id="L26">    }</span>
+    
+    public static void verifyBugA() {
+<span class="nc" id="L29">        System.out.println(&quot;🐛 BUG A VERIFICATION - Logic Error:&quot;);</span>
+<span class="nc" id="L30">        System.out.println(&quot;Expected: OrderItem price should use product.getPrice()&quot;);</span>
+<span class="nc" id="L31">        System.out.println(&quot;Actual: OrderItem price is hardcoded to 9999.99&quot;);</span>
+        
+        try {
+            // Create mock objects
+<span class="nc" id="L35">            Order order = new Order();</span>
+<span class="nc" id="L36">            Product product = new Product();</span>
+<span class="nc" id="L37">            product.setPrice(50.0); // Real price</span>
+            
+<span class="nc" id="L39">            CreateOrderRequestDTO.OrderItemRequest itemReq = new CreateOrderRequestDTO.OrderItemRequest();</span>
+<span class="nc" id="L40">            itemReq.setQuantity(2);</span>
+            
+            // Use reflection to call the private method
+<span class="nc" id="L43">            OrderServiceImpl orderService = new OrderServiceImpl();</span>
+<span class="nc" id="L44">            Method method = OrderServiceImpl.class.getDeclaredMethod(&quot;createOrderItem&quot;, </span>
+                Order.class, Product.class, CreateOrderRequestDTO.OrderItemRequest.class);
+<span class="nc" id="L46">            method.setAccessible(true);</span>
+            
+<span class="nc" id="L48">            OrderItem result = (OrderItem) method.invoke(orderService, order, product, itemReq);</span>
+            
+<span class="nc" id="L50">            System.out.println(&quot;Product price: &quot; + product.getPrice());</span>
+<span class="nc" id="L51">            System.out.println(&quot;OrderItem price: &quot; + result.getPrice());</span>
+<span class="nc" id="L52">            System.out.println(&quot;✅ BUG A CONFIRMED: Price is &quot; + result.getPrice() + &quot; instead of &quot; + product.getPrice());</span>
+            
+<span class="nc" id="L54">        } catch (Exception e) {</span>
+<span class="nc" id="L55">            System.out.println(&quot;❌ Could not verify Bug A: &quot; + e.getMessage());</span>
+<span class="nc" id="L56">        }</span>
+<span class="nc" id="L57">        System.out.println();</span>
+<span class="nc" id="L58">    }</span>
+    
+    public static void verifyBugB() {
+<span class="nc" id="L61">        System.out.println(&quot;🐛 BUG B VERIFICATION - Runtime Exception:&quot;);</span>
+<span class="nc" id="L62">        System.out.println(&quot;Expected: ProductService.getById() should return Optional.empty() or throw exception&quot;);</span>
+<span class="nc" id="L63">        System.out.println(&quot;Actual: ProductService.getById() returns null causing NPE&quot;);</span>
+        
+        try {
+<span class="nc" id="L66">            ProductServiceImpl productService = new ProductServiceImpl();</span>
+            
+            // This will return null due to Bug B
+<span class="nc" id="L69">            var result = productService.getById(999L);</span>
+            
+<span class="nc" id="L71">            System.out.println(&quot;getById(999L) returned: &quot; + result);</span>
+            
+            // Try to call Optional methods on null - this will cause NPE
+<span class="nc bnc" id="L74" title="All 2 branches missed.">            if (result == null) {</span>
+<span class="nc" id="L75">                System.out.println(&quot;✅ BUG B CONFIRMED: getById() returned null instead of Optional&quot;);</span>
+                try {
+                    // Simulate what would happen if code tried to use this as Optional
+<span class="nc" id="L78">                    System.out.println(&quot;   If code tried result.isEmpty(), it would throw NPE&quot;);</span>
+<span class="nc" id="L79">                } catch (Exception e) {</span>
+<span class="nc" id="L80">                    System.out.println(&quot;✅ BUG B NPE CONFIRMED: &quot; + e.getClass().getSimpleName());</span>
+<span class="nc" id="L81">                }</span>
+            }
+            
+<span class="nc" id="L84">        } catch (Exception e) {</span>
+<span class="nc" id="L85">            System.out.println(&quot;❌ Could not verify Bug B: &quot; + e.getMessage());</span>
+<span class="nc" id="L86">        }</span>
+<span class="nc" id="L87">        System.out.println();</span>
+<span class="nc" id="L88">    }</span>
+    
+    public static void verifyBugC() {
+<span class="nc" id="L91">        System.out.println(&quot;🐛 BUG C VERIFICATION - Data Integrity:&quot;);</span>
+<span class="nc" id="L92">        System.out.println(&quot;Expected: @Transactional annotation should provide atomicity&quot;);</span>
+<span class="nc" id="L93">        System.out.println(&quot;Actual: @Transactional is commented out&quot;);</span>
+        
+        try {
+            // Check the source code for @Transactional annotation
+<span class="nc" id="L97">            Method method = OrderServiceImpl.class.getMethod(&quot;placeOrder&quot;, CreateOrderRequestDTO.class);</span>
+            
+<span class="nc" id="L99">            boolean hasTransactional = method.isAnnotationPresent(</span>
+                org.springframework.transaction.annotation.Transactional.class);
+            
+<span class="nc" id="L102">            System.out.println(&quot;placeOrder() has @Transactional: &quot; + hasTransactional);</span>
+            
+<span class="nc bnc" id="L104" title="All 2 branches missed.">            if (!hasTransactional) {</span>
+<span class="nc" id="L105">                System.out.println(&quot;✅ BUG C CONFIRMED: @Transactional annotation is missing&quot;);</span>
+<span class="nc" id="L106">                System.out.println(&quot;   This means no automatic rollback on errors&quot;);</span>
+<span class="nc" id="L107">                System.out.println(&quot;   Potential for data inconsistency in error scenarios&quot;);</span>
+            } else {
+<span class="nc" id="L109">                System.out.println(&quot;❌ BUG C NOT CONFIRMED: @Transactional is still present&quot;);</span>
+            }
+            
+<span class="nc" id="L112">        } catch (Exception e) {</span>
+<span class="nc" id="L113">            System.out.println(&quot;❌ Could not verify Bug C: &quot; + e.getMessage());</span>
+<span class="nc" id="L114">        }</span>
+<span class="nc" id="L115">        System.out.println();</span>
+<span class="nc" id="L116">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

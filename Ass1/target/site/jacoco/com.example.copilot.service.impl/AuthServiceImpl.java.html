@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuthServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">lab3-springboot</a> &gt; <a href="index.source.html" class="el_package">com.example.copilot.service.impl</a> &gt; <span class="el_source">AuthServiceImpl.java</span></div><h1>AuthServiceImpl.java</h1><pre class="source lang-java linenums">package com.example.copilot.service.impl;
+
+import com.example.copilot.core.dto.AuthResponseDTO;
+import com.example.copilot.core.dto.LoginRequestDTO;
+import com.example.copilot.core.dto.RegisterRequestDTO;
+import com.example.copilot.core.entity.User;
+import com.example.copilot.core.enums.UserRole;
+import com.example.copilot.core.repository.UserRepository;
+import com.example.copilot.service.AuthService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
+
+@Service
+@Transactional
+<span class="fc" id="L20">public class AuthServiceImpl implements AuthService {</span>
+
+    @Autowired
+    private UserRepository userRepository;
+    
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Override
+    public AuthResponseDTO register(RegisterRequestDTO request) {
+        // Validate password confirmation
+<span class="fc bfc" id="L31" title="All 2 branches covered.">        if (!request.getPassword().equals(request.getConfirmPassword())) {</span>
+<span class="fc" id="L32">            throw new IllegalArgumentException(&quot;Passwords do not match&quot;);</span>
+        }
+        
+        // Check if email already exists (SQL Injection safe with parameterized queries)
+<span class="pc bpc" id="L36" title="1 of 2 branches missed.">        if (userRepository.existsByEmail(request.getEmail())) {</span>
+<span class="nc" id="L37">            throw new IllegalArgumentException(&quot;Email already registered&quot;);</span>
+        }
+        
+        // Create user with encrypted password
+<span class="fc" id="L41">        User user = new User();</span>
+<span class="fc" id="L42">        user.setName(sanitizeInput(request.getName()));</span>
+<span class="fc" id="L43">        user.setEmail(request.getEmail().toLowerCase().trim());</span>
+<span class="fc" id="L44">        user.setPassword(passwordEncoder.encode(request.getPassword()));</span>
+<span class="fc" id="L45">        user.setRole(UserRole.USER); // Default role</span>
+<span class="fc" id="L46">        user.setCreationDate(LocalDateTime.now());</span>
+        
+<span class="fc" id="L48">        User savedUser = userRepository.save(user);</span>
+        
+<span class="fc" id="L50">        return new AuthResponseDTO(&quot;Registration successful&quot;, savedUser.getId(), null, savedUser.getRole().name());</span>
+    }
+    
+    @Override
+    public AuthResponseDTO login(LoginRequestDTO request) {
+<span class="nc" id="L55">        String email = request.getEmail().toLowerCase().trim();</span>
+        
+<span class="nc" id="L57">        Optional&lt;User&gt; userOpt = userRepository.findByEmail(email);</span>
+<span class="nc bnc" id="L58" title="All 2 branches missed.">        if (userOpt.isEmpty()) {</span>
+<span class="nc" id="L59">            throw new IllegalArgumentException(&quot;Invalid email or password&quot;);</span>
+        }
+        
+<span class="nc" id="L62">        User user = userOpt.get();</span>
+        
+        // Check password
+<span class="nc bnc" id="L65" title="All 2 branches missed.">        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {</span>
+<span class="nc" id="L66">            throw new IllegalArgumentException(&quot;Invalid email or password&quot;);</span>
+        }
+        
+        // For now, return simple response (can be enhanced with JWT later)
+<span class="nc" id="L70">        return new AuthResponseDTO(&quot;Login successful&quot;, user.getId(), &quot;simple-token&quot;, user.getRole().name());</span>
+    }
+    
+    /**
+     * Sanitize input to prevent XSS
+     */
+    private String sanitizeInput(String input) {
+<span class="pc bpc" id="L77" title="1 of 2 branches missed.">        if (input == null) return null;</span>
+<span class="fc" id="L78">        return input.trim()</span>
+<span class="fc" id="L79">                   .replaceAll(&quot;&lt;&quot;, &quot;&amp;lt;&quot;)</span>
+<span class="fc" id="L80">                   .replaceAll(&quot;&gt;&quot;, &quot;&amp;gt;&quot;)</span>
+<span class="fc" id="L81">                   .replaceAll(&quot;\&quot;&quot;, &quot;&amp;quot;&quot;)</span>
+<span class="fc" id="L82">                   .replaceAll(&quot;'&quot;, &quot;&amp;#x27;&quot;)</span>
+<span class="fc" id="L83">                   .replaceAll(&quot;/&quot;, &quot;&amp;#x2F;&quot;);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

@@ -1,0 +1,375 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrderServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">lab3-springboot</a> &gt; <a href="index.source.html" class="el_package">com.example.copilot.service.impl</a> &gt; <span class="el_source">OrderServiceImpl.java</span></div><h1>OrderServiceImpl.java</h1><pre class="source lang-java linenums">package com.example.copilot.service.impl;
+
+import com.example.copilot.core.dto.OrderDTO;
+import com.example.copilot.core.dto.CreateOrderRequestDTO;
+import com.example.copilot.core.dto.OrderItemDTO;
+import com.example.copilot.core.dto.CartItem;
+import com.example.copilot.core.entity.Order;
+import com.example.copilot.core.entity.OrderItem;
+import com.example.copilot.core.entity.Product;
+import com.example.copilot.core.entity.User;
+import com.example.copilot.core.enums.OrderStatus;
+import com.example.copilot.core.repository.OrderItemRepository;
+import com.example.copilot.core.repository.OrderRepository;
+import com.example.copilot.core.repository.ProductRepository;
+import com.example.copilot.core.repository.UserRepository;
+import com.example.copilot.exception.InsufficientStockException;
+import com.example.copilot.exception.ResourceNotFoundException;
+import com.example.copilot.service.OrderService;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+<span class="fc" id="L29">public class OrderServiceImpl implements OrderService {</span>
+    @Autowired
+    private OrderRepository orderRepository;
+    @Autowired
+    private OrderItemRepository orderItemRepository;
+    @Autowired
+    private ProductRepository productRepository;
+    @Autowired
+    private UserRepository userRepository;
+
+    @Override
+    @Transactional
+    public OrderDTO placeOrder(CreateOrderRequestDTO request) {
+        // Input validation
+<span class="fc" id="L43">        validateOrderRequest(request);</span>
+        
+        // 1. Validation phase - Read-only operations
+<span class="fc" id="L46">        User user = validateAndGetUser(request.getUserId());</span>
+        
+        // 2. Business logic phase - Build order structure
+<span class="fc" id="L49">        Order order = buildOrder(user, request.getItems());</span>
+        
+        // 3. Persistence phase - Database write operations
+<span class="fc" id="L52">        Order savedOrder = saveOrderWithItems(order);</span>
+        
+<span class="fc" id="L54">        return toDTO(savedOrder);</span>
+    }
+
+    /**
+     * Validates the order request input
+     * @param request The order request to validate
+     * @throws IllegalArgumentException if request is invalid
+     */
+    private void validateOrderRequest(CreateOrderRequestDTO request) {
+<span class="pc bpc" id="L63" title="1 of 2 branches missed.">        if (request == null) {</span>
+<span class="nc" id="L64">            throw new IllegalArgumentException(&quot;Order request cannot be null&quot;);</span>
+        }
+<span class="pc bpc" id="L66" title="1 of 2 branches missed.">        if (request.getUserId() == null) {</span>
+<span class="nc" id="L67">            throw new IllegalArgumentException(&quot;User ID is required&quot;);</span>
+        }
+<span class="pc bpc" id="L69" title="2 of 4 branches missed.">        if (request.getItems() == null || request.getItems().isEmpty()) {</span>
+<span class="nc" id="L70">            throw new IllegalArgumentException(&quot;Order must contain at least one item&quot;);</span>
+        }
+<span class="fc" id="L72">    }</span>
+
+    /**
+     * Validates user existence and returns the user entity
+     * @param userId The user ID to validate
+     * @return User entity if found and valid
+     * @throws ResourceNotFoundException if user not found
+     * @throws IllegalArgumentException if userId is null
+     */
+    private User validateAndGetUser(Long userId) {
+<span class="fc bfc" id="L82" title="All 2 branches covered.">        if (userId == null) {</span>
+<span class="fc" id="L83">            throw new IllegalArgumentException(&quot;User ID cannot be null&quot;);</span>
+        }
+        
+<span class="fc" id="L86">        User user = userRepository.findById(userId)</span>
+<span class="fc" id="L87">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;User not found with ID: &quot; + userId));</span>
+        
+<span class="fc" id="L89">        verifyUserExists(user);</span>
+<span class="fc" id="L90">        return user;</span>
+    }
+
+    /**
+     * Verifies that the user exists and is valid for placing orders
+     * @param user The user entity to verify
+     * @throws ResourceNotFoundException if user is null or doesn't exist
+     * @throws IllegalArgumentException if user data is invalid
+     */
+    private void verifyUserExists(User user) {
+<span class="fc bfc" id="L100" title="All 2 branches covered.">        if (user == null) {</span>
+<span class="fc" id="L101">            throw new ResourceNotFoundException(&quot;User not found&quot;);</span>
+        }
+        
+<span class="pc bpc" id="L104" title="1 of 2 branches missed.">        if (user.getId() == null) {</span>
+<span class="nc" id="L105">            throw new IllegalArgumentException(&quot;User ID cannot be null&quot;);</span>
+        }
+        
+        // Additional business rule validations if needed
+<span class="pc bpc" id="L109" title="1 of 2 branches missed.">        if (user.getRole() == null) {</span>
+<span class="nc" id="L110">            throw new IllegalArgumentException(&quot;User role is required for placing orders&quot;);</span>
+        }
+<span class="fc" id="L112">    }</span>
+
+    /**
+     * Builds an Order entity with necessary information before saving to database
+     * @param user The user placing the order
+     * @param items List of order items to be processed
+     * @return Order entity ready to be saved
+     */
+    private Order buildOrder(User user, List&lt;CreateOrderRequestDTO.OrderItemRequest&gt; items) {
+        // Validate inputs
+<span class="pc bpc" id="L122" title="1 of 2 branches missed.">        if (user == null) {</span>
+<span class="nc" id="L123">            throw new IllegalArgumentException(&quot;User cannot be null&quot;);</span>
+        }
+<span class="pc bpc" id="L125" title="2 of 4 branches missed.">        if (items == null || items.isEmpty()) {</span>
+<span class="nc" id="L126">            throw new IllegalArgumentException(&quot;Order items cannot be null or empty&quot;);</span>
+        }
+        
+        // Create order entity
+<span class="fc" id="L130">        Order order = new Order();</span>
+<span class="fc" id="L131">        order.setOrderDate(LocalDateTime.now());</span>
+<span class="fc" id="L132">        order.setStatus(OrderStatus.PENDING);</span>
+<span class="fc" id="L133">        order.setUser(user);</span>
+        
+        // Build order items
+<span class="fc" id="L136">        Set&lt;OrderItem&gt; orderItems = processOrderItems(items, order);</span>
+<span class="fc" id="L137">        order.setOrderItems(orderItems);</span>
+        
+<span class="fc" id="L139">        return order;</span>
+    }
+
+    /**
+     * Processes order items: validates products, checks stock, creates order items
+     * @param itemRequests List of item requests
+     * @param order The parent order
+     * @return Set of processed order items
+     */
+    private Set&lt;OrderItem&gt; processOrderItems(List&lt;CreateOrderRequestDTO.OrderItemRequest&gt; itemRequests, Order order) {
+        // Validate all items first (fail-fast approach)
+<span class="fc" id="L150">        validateAllOrderItems(itemRequests);</span>
+        
+<span class="fc" id="L152">        Set&lt;OrderItem&gt; orderItems = new HashSet&lt;&gt;();</span>
+        
+<span class="fc bfc" id="L154" title="All 2 branches covered.">        for (CreateOrderRequestDTO.OrderItemRequest itemReq : itemRequests) {</span>
+<span class="fc" id="L155">            OrderItem orderItem = processIndividualOrderItem(itemReq, order);</span>
+<span class="fc" id="L156">            orderItems.add(orderItem);</span>
+<span class="fc" id="L157">        }</span>
+        
+<span class="fc" id="L159">        return orderItems;</span>
+    }
+
+    /**
+     * Validates all order items before processing (fail-fast approach)
+     * @param itemRequests List of item requests to validate
+     * @throws IllegalArgumentException if any validation fails
+     */
+    private void validateAllOrderItems(List&lt;CreateOrderRequestDTO.OrderItemRequest&gt; itemRequests) {
+<span class="pc bpc" id="L168" title="2 of 4 branches missed.">        if (itemRequests == null || itemRequests.isEmpty()) {</span>
+<span class="nc" id="L169">            throw new IllegalArgumentException(&quot;Order items cannot be null or empty&quot;);</span>
+        }
+        
+<span class="fc bfc" id="L172" title="All 2 branches covered.">        for (CreateOrderRequestDTO.OrderItemRequest itemReq : itemRequests) {</span>
+<span class="fc" id="L173">            validateOrderItemRequest(itemReq);</span>
+<span class="fc" id="L174">        }</span>
+<span class="fc" id="L175">    }</span>
+
+    /**
+     * Validates individual order item request
+     * @param itemReq The item request to validate
+     * @throws IllegalArgumentException if validation fails
+     */
+    private void validateOrderItemRequest(CreateOrderRequestDTO.OrderItemRequest itemReq) {
+<span class="pc bpc" id="L183" title="1 of 2 branches missed.">        if (itemReq == null) {</span>
+<span class="nc" id="L184">            throw new IllegalArgumentException(&quot;Order item request cannot be null&quot;);</span>
+        }
+<span class="pc bpc" id="L186" title="1 of 2 branches missed.">        if (itemReq.getProductId() == null) {</span>
+<span class="nc" id="L187">            throw new IllegalArgumentException(&quot;Product ID cannot be null&quot;);</span>
+        }
+<span class="pc bpc" id="L189" title="2 of 4 branches missed.">        if (itemReq.getQuantity() == null || itemReq.getQuantity() &lt;= 0) {</span>
+<span class="nc" id="L190">            throw new IllegalArgumentException(&quot;Quantity must be positive&quot;);</span>
+        }
+<span class="fc" id="L192">    }</span>
+
+    /**
+     * Processes individual order item: validates product, checks stock, updates inventory, creates order item
+     * @param itemReq The item request
+     * @param order The parent order
+     * @return Created order item
+     */
+    private OrderItem processIndividualOrderItem(CreateOrderRequestDTO.OrderItemRequest itemReq, Order order) {
+        // Step 1: Validate and get product
+<span class="fc" id="L202">        Product product = validateAndGetProduct(itemReq.getProductId());</span>
+        
+        // Step 2: Validate stock availability
+<span class="fc" id="L205">        validateStockAvailability(product, itemReq.getQuantity());</span>
+        
+        // Step 3: Reserve inventory (update stock)
+<span class="fc" id="L208">        reserveProductInventory(product, itemReq.getQuantity());</span>
+        
+        // Step 4: Create order item
+<span class="fc" id="L211">        return createOrderItem(order, product, itemReq);</span>
+    }
+
+    /**
+     * Reserves product inventory by updating stock quantity
+     * @param product The product to reserve inventory for
+     * @param quantity The quantity to reserve
+     */
+    private void reserveProductInventory(Product product, Integer quantity) {
+<span class="fc" id="L220">        product.setStockQuantity(product.getStockQuantity() - quantity);</span>
+<span class="fc" id="L221">        productRepository.save(product);</span>
+<span class="fc" id="L222">    }</span>
+
+    /**
+     * Validates product existence and returns the product entity
+     * @param productId The product ID to validate
+     * @return Product entity if found
+     * @throws ResourceNotFoundException if product not found
+     */
+    private Product validateAndGetProduct(Long productId) {
+<span class="fc" id="L231">        return productRepository.findById(productId)</span>
+<span class="fc" id="L232">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Product not found with ID: &quot; + productId));</span>
+    }
+
+    /**
+     * Validates if sufficient stock is available
+     * @param product The product to check
+     * @param requestedQuantity The requested quantity
+     * @throws InsufficientStockException if not enough stock
+     */
+    private void validateStockAvailability(Product product, Integer requestedQuantity) {
+<span class="fc bfc" id="L242" title="All 2 branches covered.">        if (product.getStockQuantity() &lt; requestedQuantity) {</span>
+<span class="fc" id="L243">            throw new InsufficientStockException(&quot;Not enough stock for product: &quot; + product.getName() + </span>
+<span class="fc" id="L244">                    &quot;. Available: &quot; + product.getStockQuantity() + &quot;, Requested: &quot; + requestedQuantity);</span>
+        }
+<span class="fc" id="L246">    }</span>
+
+    /**
+     * Creates an order item entity
+     * @param order The parent order
+     * @param product The product for this item
+     * @param itemReq The item request with quantity
+     * @return Created order item
+     */
+    private OrderItem createOrderItem(Order order, Product product, CreateOrderRequestDTO.OrderItemRequest itemReq) {
+<span class="fc" id="L256">        OrderItem orderItem = new OrderItem();</span>
+<span class="fc" id="L257">        orderItem.setOrder(order);</span>
+<span class="fc" id="L258">        orderItem.setProduct(product);</span>
+<span class="fc" id="L259">        orderItem.setQuantity(itemReq.getQuantity());</span>
+        // FIXED: Use actual product price instead of hardcoded wrong value
+<span class="fc" id="L261">        orderItem.setPrice(product.getPrice());</span>
+<span class="fc" id="L262">        return orderItem;</span>
+    }
+
+    /**
+     * Saves order and its items to database
+     * @param order The order to save
+     * @return Saved order entity
+     */
+    private Order saveOrderWithItems(Order order) {
+<span class="fc" id="L271">        Order savedOrder = orderRepository.save(order);</span>
+<span class="pc bpc" id="L272" title="2 of 4 branches missed.">        if (order.getOrderItems() != null &amp;&amp; !order.getOrderItems().isEmpty()) {</span>
+<span class="fc" id="L273">            orderItemRepository.saveAll(order.getOrderItems());</span>
+        }
+<span class="fc" id="L275">        return savedOrder;</span>
+    }
+
+    /**
+     * Alternative buildOrder method using CartItem for flexibility
+     * @param user The user placing the order
+     * @param cartItems List of cart items
+     * @return Order entity ready to be saved
+     */
+    private Order buildOrderFromCart(User user, List&lt;CartItem&gt; cartItems) {
+<span class="nc bnc" id="L285" title="All 2 branches missed.">        if (user == null) {</span>
+<span class="nc" id="L286">            throw new IllegalArgumentException(&quot;User cannot be null&quot;);</span>
+        }
+<span class="nc bnc" id="L288" title="All 4 branches missed.">        if (cartItems == null || cartItems.isEmpty()) {</span>
+<span class="nc" id="L289">            throw new IllegalArgumentException(&quot;Cart items cannot be null or empty&quot;);</span>
+        }
+        
+<span class="nc" id="L292">        Order order = new Order();</span>
+<span class="nc" id="L293">        order.setOrderDate(LocalDateTime.now());</span>
+<span class="nc" id="L294">        order.setStatus(OrderStatus.PENDING);</span>
+<span class="nc" id="L295">        order.setUser(user);</span>
+        
+<span class="nc" id="L297">        Set&lt;OrderItem&gt; orderItems = buildOrderItems(order, cartItems);</span>
+<span class="nc" id="L298">        order.setOrderItems(orderItems);</span>
+        
+<span class="nc" id="L300">        return order;</span>
+    }
+
+    /**
+     * Builds OrderItem entities from CartItem list
+     * @param order The parent order
+     * @param cartItems List of cart items
+     * @return Set of OrderItem entities
+     */
+    private Set&lt;OrderItem&gt; buildOrderItems(Order order, List&lt;CartItem&gt; cartItems) {
+<span class="nc" id="L310">        Set&lt;OrderItem&gt; orderItems = new HashSet&lt;&gt;();</span>
+        
+<span class="nc bnc" id="L312" title="All 2 branches missed.">        for (CartItem cartItem : cartItems) {</span>
+<span class="nc" id="L313">            Product product = validateAndGetProduct(cartItem.getProductId());</span>
+<span class="nc" id="L314">            validateStockAvailability(product, cartItem.getQuantity());</span>
+            
+<span class="nc" id="L316">            OrderItem orderItem = new OrderItem();</span>
+<span class="nc" id="L317">            orderItem.setOrder(order);</span>
+<span class="nc" id="L318">            orderItem.setProduct(product);</span>
+<span class="nc" id="L319">            orderItem.setQuantity(cartItem.getQuantity());</span>
+<span class="nc" id="L320">            orderItem.setPrice(product.getPrice());</span>
+            
+<span class="nc" id="L322">            orderItems.add(orderItem);</span>
+<span class="nc" id="L323">            reserveProductInventory(product, cartItem.getQuantity());</span>
+<span class="nc" id="L324">        }</span>
+        
+<span class="nc" id="L326">        return orderItems;</span>
+    }
+
+    @Override
+    public Optional&lt;OrderDTO&gt; getById(Long id) {
+<span class="fc" id="L331">        return orderRepository.findById(id).map(this::toDTO);</span>
+    }
+
+    @Override
+    public List&lt;OrderDTO&gt; getAll() {
+<span class="fc" id="L336">        return orderRepository.findAll().stream().map(this::toDTO).collect(Collectors.toList());</span>
+    }
+
+    @Override
+    public List&lt;OrderDTO&gt; getByUserId(Long userId) {
+<span class="fc" id="L341">        return orderRepository.findAll().stream()</span>
+<span class="pc bpc" id="L342" title="2 of 4 branches missed.">                .filter(o -&gt; o.getUser() != null &amp;&amp; o.getUser().getId().equals(userId))</span>
+<span class="fc" id="L343">                .map(this::toDTO)</span>
+<span class="fc" id="L344">                .collect(Collectors.toList());</span>
+    }
+
+    @Override
+    public boolean delete(Long id) {
+<span class="fc bfc" id="L349" title="All 2 branches covered.">        if (!orderRepository.existsById(id)) return false;</span>
+<span class="fc" id="L350">        orderRepository.deleteById(id);</span>
+<span class="fc" id="L351">        return true;</span>
+    }
+
+    private OrderDTO toDTO(Order order) {
+<span class="fc" id="L355">        OrderDTO dto = new OrderDTO();</span>
+<span class="fc" id="L356">        dto.setId(order.getId());</span>
+<span class="fc" id="L357">        dto.setOrderDate(order.getOrderDate());</span>
+<span class="fc" id="L358">        dto.setStatus(order.getStatus().name());</span>
+<span class="pc bpc" id="L359" title="1 of 2 branches missed.">        dto.setUserId(order.getUser() != null ? order.getUser().getId() : null);</span>
+<span class="pc bpc" id="L360" title="1 of 2 branches missed.">        if (order.getOrderItems() != null) {</span>
+<span class="fc" id="L361">            Set&lt;OrderItemDTO&gt; items = order.getOrderItems().stream().map(this::toItemDTO).collect(Collectors.toSet());</span>
+<span class="fc" id="L362">            dto.setOrderItems(items);</span>
+        }
+<span class="fc" id="L364">        return dto;</span>
+    }
+    private OrderItemDTO toItemDTO(OrderItem item) {
+<span class="fc" id="L367">        OrderItemDTO dto = new OrderItemDTO();</span>
+<span class="fc" id="L368">        dto.setId(item.getId());</span>
+<span class="pc bpc" id="L369" title="1 of 2 branches missed.">        dto.setProductId(item.getProduct() != null ? item.getProduct().getId() : null);</span>
+<span class="fc" id="L370">        dto.setQuantity(item.getQuantity());</span>
+<span class="fc" id="L371">        dto.setPrice(item.getPrice());</span>
+<span class="fc" id="L372">        return dto;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

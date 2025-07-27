@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RegisterRequestDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">lab3-springboot</a> &gt; <a href="index.source.html" class="el_package">com.example.copilot.core.dto</a> &gt; <span class="el_source">RegisterRequestDTO.java</span></div><h1>RegisterRequestDTO.java</h1><pre class="source lang-java linenums">package com.example.copilot.core.dto;
+
+import jakarta.validation.constraints.*;
+
+public class RegisterRequestDTO {
+    
+    @NotBlank(message = &quot;Name is required&quot;)
+    @Size(min = 2, max = 50, message = &quot;Name must be between 2 and 50 characters&quot;)
+    @Pattern(regexp = &quot;^[a-zA-Z\\s]+$&quot;, message = &quot;Name can only contain letters and spaces&quot;)
+    private String name;
+    
+    @NotBlank(message = &quot;Email is required&quot;)
+    @Email(message = &quot;Email format is invalid&quot;)
+    @Size(max = 100, message = &quot;Email cannot exceed 100 characters&quot;)
+    private String email;
+    
+    @NotBlank(message = &quot;Password is required&quot;)
+    @Size(min = 8, max = 128, message = &quot;Password must be between 8 and 128 characters&quot;)
+    @Pattern(
+        regexp = &quot;^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&amp;])[A-Za-z\\d@$!%*?&amp;]+$&quot;,
+        message = &quot;Password must contain at least one lowercase letter, one uppercase letter, one digit, and one special character&quot;
+    )
+    private String password;
+    
+    @NotBlank(message = &quot;Password confirmation is required&quot;)
+    private String confirmPassword;
+
+    // Constructors
+<span class="fc" id="L29">    public RegisterRequestDTO() {}</span>
+
+<span class="nc" id="L31">    public RegisterRequestDTO(String name, String email, String password, String confirmPassword) {</span>
+<span class="nc" id="L32">        this.name = name;</span>
+<span class="nc" id="L33">        this.email = email;</span>
+<span class="nc" id="L34">        this.password = password;</span>
+<span class="nc" id="L35">        this.confirmPassword = confirmPassword;</span>
+<span class="nc" id="L36">    }</span>
+
+    // Getters and Setters
+    public String getName() {
+<span class="fc" id="L40">        return name;</span>
+    }
+
+    public void setName(String name) {
+<span class="fc" id="L44">        this.name = name;</span>
+<span class="fc" id="L45">    }</span>
+
+    public String getEmail() {
+<span class="fc" id="L48">        return email;</span>
+    }
+
+    public void setEmail(String email) {
+<span class="fc" id="L52">        this.email = email;</span>
+<span class="fc" id="L53">    }</span>
+
+    public String getPassword() {
+<span class="fc" id="L56">        return password;</span>
+    }
+
+    public void setPassword(String password) {
+<span class="fc" id="L60">        this.password = password;</span>
+<span class="fc" id="L61">    }</span>
+
+    public String getConfirmPassword() {
+<span class="fc" id="L64">        return confirmPassword;</span>
+    }
+
+    public void setConfirmPassword(String confirmPassword) {
+<span class="fc" id="L68">        this.confirmPassword = confirmPassword;</span>
+<span class="fc" id="L69">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

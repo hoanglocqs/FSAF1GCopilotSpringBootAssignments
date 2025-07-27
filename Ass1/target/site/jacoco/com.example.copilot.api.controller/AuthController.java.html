@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuthController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">lab3-springboot</a> &gt; <a href="index.source.html" class="el_package">com.example.copilot.api.controller</a> &gt; <span class="el_source">AuthController.java</span></div><h1>AuthController.java</h1><pre class="source lang-java linenums">package com.example.copilot.api.controller;
+
+import com.example.copilot.core.dto.AuthResponseDTO;
+import com.example.copilot.core.dto.LoginRequestDTO;
+import com.example.copilot.core.dto.RegisterRequestDTO;
+import com.example.copilot.service.AuthService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping(&quot;/api/auth&quot;)
+<span class="fc" id="L14">public class AuthController {</span>
+
+    @Autowired
+    private AuthService authService;
+
+    /**
+     * User registration with comprehensive validation
+     */
+    @PostMapping(&quot;/register&quot;)
+    public ResponseEntity&lt;AuthResponseDTO&gt; register(@Valid @RequestBody RegisterRequestDTO request) {
+        try {
+<span class="fc" id="L25">            AuthResponseDTO response = authService.register(request);</span>
+<span class="fc" id="L26">            return ResponseEntity.ok(response);</span>
+<span class="fc" id="L27">        } catch (IllegalArgumentException e) {</span>
+<span class="fc" id="L28">            AuthResponseDTO errorResponse = new AuthResponseDTO();</span>
+<span class="fc" id="L29">            errorResponse.setMessage(e.getMessage());</span>
+<span class="fc" id="L30">            return ResponseEntity.badRequest().body(errorResponse);</span>
+        }
+    }
+
+    /**
+     * User login
+     */
+    @PostMapping(&quot;/login&quot;)
+    public ResponseEntity&lt;AuthResponseDTO&gt; login(@Valid @RequestBody LoginRequestDTO request) {
+        try {
+<span class="nc" id="L40">            AuthResponseDTO response = authService.login(request);</span>
+<span class="nc" id="L41">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L42">        } catch (IllegalArgumentException e) {</span>
+<span class="nc" id="L43">            AuthResponseDTO errorResponse = new AuthResponseDTO();</span>
+<span class="nc" id="L44">            errorResponse.setMessage(e.getMessage());</span>
+<span class="nc" id="L45">            return ResponseEntity.badRequest().body(errorResponse);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>
